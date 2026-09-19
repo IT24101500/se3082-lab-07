@@ -1,0 +1,10 @@
+Root filled array with values 1 to 1000000
+  Rank 2: summed its local_chunk of 250000 elements => local_sum = 156250125000
+  Rank 3: summed its local_chunk of 250000 elements => local_sum = 218750125000
+  Rank 0: summed its local_chunk of 250000 elements => local_sum = 31250125000
+
+[Scatter] Total sum   = 500000500000
+[Scatter] Expected    = 500000500000
+[Scatter] Correct?    = YES
+[Scatter] Time        = 0.0016 sec
+  Rank 1: summed its local_chunk of 250000 elements => local_sum = 93750125000

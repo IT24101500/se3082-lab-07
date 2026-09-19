@@ -1,0 +1,78 @@
+mpicc -o sum_bcast ../Exercise01/sum_bcast.c
+mpicc -o sum_scatter ../Exercise02/sum_scatter.c
+mpicc -o sum_gather ../Exercise03/sum_gather.c
+mpicc -o sum_reduce ../Exercise04/sum_reduce.c
+mpicc -o sum_allreduce ../Exercise05/sum_allreduce.c
+mpicc -o sum_scan ../Exercise06/sum_scan.c
+=== sum_bcast (np=4) ===
+Root filled array with values 1 to 1000000
+  Rank 0: summed indices [0, 250000) => local_sum = 31250125000
+  Rank 1: summed indices [250000, 500000) => local_sum = 93750125000
+  Rank 3: summed indices [750000, 1000000) => local_sum = 218750125000
+  Rank 2: summed indices [500000, 750000) => local_sum = 156250125000
+
+[Bcast] Total sum   = 500000500000
+[Bcast] Expected    = 500000500000
+[Bcast] Correct?    = YES
+[Bcast] Time        = 0.0051 sec
+
+=== sum_scatter (np=4) ===
+Root filled array with values 1 to 1000000
+  Rank 1: summed its local_chunk of 250000 elements => local_sum = 93750125000
+  Rank 0: summed its local_chunk of 250000 elements => local_sum = 31250125000
+  Rank 3: summed its local_chunk of 250000 elements => local_sum = 218750125000
+  Rank 2: summed its local_chunk of 250000 elements => local_sum = 156250125000
+
+[Scatter] Total sum   = 500000500000
+[Scatter] Expected    = 500000500000
+[Scatter] Correct?    = YES
+[Scatter] Time        = 0.0024 sec
+
+=== sum_gather (np=4) ===
+Root filled array with values 1 to 1000000
+  Rank 3: summed its local_chunk of 250000 elements => local_sum = 218750125000
+  Rank 2: summed its local_chunk of 250000 elements => local_sum = 156250125000
+  Rank 1: summed its local_chunk of 250000 elements => local_sum = 93750125000
+  Rank 0: summed its local_chunk of 250000 elements => local_sum = 31250125000
+
+[Gather] Total sum   = 500000500000
+[Gather] Expected    = 500000500000
+[Gather] Correct?    = YES
+[Gather] Time        = 0.0020 sec
+
+=== sum_reduce (np=4) ===
+Root filled array with values 1 to 1000000
+  Rank 1: summed its local_chunk of 250000 elements => local_sum = 93750125000
+  Rank 0: summed its local_chunk of 250000 elements => local_sum = 31250125000
+
+[Reduce] Total sum   = 500000500000
+[Reduce] Expected    = 500000500000
+[Reduce] Correct?    = YES
+[Reduce] Time        = 0.0025 sec
+  Rank 3: summed its local_chunk of 250000 elements => local_sum = 218750125000
+  Rank 2: summed its local_chunk of 250000 elements => local_sum = 156250125000
+
+=== sum_allreduce (np=4) ===
+Root filled array with values 1 to 1000000
+  Rank 0: local_sum = 31250125000, total_sum = 500000500000, contribution = 6.2500%
+
+[Allreduce] Total sum   = 500000500000
+[Allreduce] Expected    = 500000500000
+[Allreduce] Correct?    = YES
+[Allreduce] Time        = 0.0029 sec
+  Rank 2: local_sum = 156250125000, total_sum = 500000500000, contribution = 31.2500%
+  Rank 3: local_sum = 218750125000, total_sum = 500000500000, contribution = 43.7500%
+  Rank 1: local_sum = 93750125000, total_sum = 500000500000, contribution = 18.7500%
+
+=== sum_scan (np=4) ===
+Root filled array with values 1 to 1000000
+  Rank 0: local_sum = 31250125000, prefix_sum = 31250125000, sum_before_me = 0, expected_prefix (K=250000) = 31250125000, match = YES
+  Rank 1: local_sum = 93750125000, prefix_sum = 125000250000, sum_before_me = 31250125000, expected_prefix (K=500000) = 125000250000, match = YES
+  Rank 2: local_sum = 156250125000, prefix_sum = 281250375000, sum_before_me = 125000250000, expected_prefix (K=750000) = 281250375000, match = YES
+  Rank 3: local_sum = 218750125000, prefix_sum = 500000500000, sum_before_me = 281250375000, expected_prefix (K=1000000) = 500000500000, match = YES
+
+[Scan] Last rank prefix_sum = 500000500000
+[Scan] Expected total       = 500000500000
+[Scan] Correct?             = YES
+[Scan] Time                 = 0.0055 sec
+

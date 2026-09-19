@@ -1,0 +1,39 @@
+Exercise 7: Summary Comparison
+================================
+
+1. Comparison table
+--------------------
+
+| Program (Exercise)      | Collectives used            | Array allocation                          | Manual summation loop on root? | Final result available on              |
+|--------------------------|------------------------------|--------------------------------------------|----------------------------------|-------------------------------------------|
+| Ex1: sum_bcast            | MPI_Bcast + Send/Recv        | Every process allocates the FULL array (N) | No (accumulated via Recv loop)   | Root only                                  |
+| Ex2: sum_scatter          | MPI_Scatter + Send/Recv      | Only root allocates full array; all allocate a chunk (N/size) | No (accumulated via Recv loop) | Root only                                  |
+| Ex3: sum_gather           | MPI_Scatter + MPI_Gather     | Only root allocates full array; all allocate a chunk | Yes (loop over all_sums[])     | Root only                                  |
+| Ex4: sum_reduce           | MPI_Scatter + MPI_Reduce     | Only root allocates full array; all allocate a chunk | No (MPI_SUM does it)           | Root only                                  |
+| Ex5: sum_allreduce        | MPI_Scatter + MPI_Allreduce  | Only root allocates full array; all allocate a chunk | No (MPI_SUM does it)           | All processes                              |
+| Ex6: sum_scan             | MPI_Scatter + MPI_Scan       | Only root allocates full array; all allocate a chunk | No (MPI_SUM does it)           | Different per rank (prefix sum); last rank's value equals the global total |
+
+2. Timing results (seconds, N = 1,000,000), machine has 8 logical cores
+-------------------------------------------------------------------------
+
+| Program        | np=2   | np=4   | np=8   |
+|-----------------|--------|--------|--------|
+| sum_bcast        | 0.0029 | 0.0055 | 0.0046 |
+| sum_scatter      | 0.0027 | 0.0022 | 0.0012 |
+| sum_gather       | 0.0027 | 0.0022 | 0.0017 |
+| sum_reduce       | 0.0028 | 0.0024 | 0.0022 |
+| sum_allreduce    | 0.0034 | 0.0020 | 0.0014 |
+| sum_scan         | 0.0060 | 0.0052 | 0.0050 |
+
+Notes on the numbers above:
+* np=8 required `mpirun --oversubscribe` since the machine's MPI runtime only detects 8 usable slots and one of them is needed by root's bookkeeping under some launch configs; oversubscribe removes the slot-count restriction. Timings were consistent across two runs.
+* sum_bcast is consistently the slowest as process count grows, because every process must receive the entire 1,000,000-element array (4MB) instead of just its chunk — the amount of data moved over the network/shared memory grows with process count instead of staying fixed.
+* sum_scatter/gather/reduce/allreduce all move only N total elements combined (root's array is split once), so they get faster as np increases: more processes means smaller per-process chunks and less serial summation work.
+* sum_scan is the slowest of the "efficient" collectives because it can't be parallelized as aggressively as Allreduce — a process's result formally depends on the results of all lower-ranked processes, so the implementation has less freedom to reorder partial combines (no butterfly/recursive-doubling shortcut the way Allreduce gets).
+* Fastest overall as np grows: sum_scatter and sum_allreduce — both avoid moving the full array and avoid any O(P) manual loop or ordering constraint.
+
+3. Thinking question
+----------------------
+Q: In what situation would you choose MPI_Scan over MPI_Allreduce? Give a concrete example.
+
+A: Choose MPI_Scan when each process needs a DIFFERENT, rank-dependent cumulative value rather than the same global total that Allreduce gives everyone. A concrete example is parallel output/index assignment: suppose each process produces a variable number of result records (e.g., "local_count" filtered rows from a distributed dataset) and all records need to be written into one shared output array/file at globally unique, contiguous positions. Each process can find its own starting offset by computing an exclusive prefix sum of local_count via MPI_Scan (then subtracting its own local_count, as done here with `sum_before_me = prefix_sum - local_sum`) — this tells it exactly how many elements were produced by all lower-ranked processes, i.e. where its own chunk should begin in the shared output. MPI_Allreduce could only tell every process the grand total, not each process's individual offset, so it cannot solve this without extra communication (e.g., Allreduce + a manual loop, which Scan does in a single optimized call).
